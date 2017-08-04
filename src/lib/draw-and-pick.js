@@ -35,12 +35,26 @@ export function drawLayers({layers, pass}) {
       compositeCount++;
     } else if (layer.props.visible) {
 
+      const pickingSelectedColor = layer.selectedObjectPickingColor();
+      if (pickingSelectedColor) {
+        layer.state.model.updateModuleSettings({
+          pickingValid: true,
+          pickingSelectedColor
+        });
+      }
+
       layer.drawLayer({
         moduleParameters: Object.assign({}, layer.props, {
           viewport: layer.context.viewport
         }),
         uniforms: Object.assign(
-          {renderPickingBuffer: 0, pickingEnabled: 0},
+          // TODO: Update all layers to use 'picking_uActive' (picking shader module)
+          // and then remove 'renderPickingBuffer' and 'pickingEnabled'.
+          {
+            renderPickingBuffer: 0,
+            pickingEnabled: 0,
+            picking_uActive: 0
+          },
           layer.context.uniforms,
           {layerIndex}
         ),
@@ -196,6 +210,17 @@ export function pickLayers(gl, {
     if (info) {
       infos.set(info.layer.id, info);
     }
+
+    const pickingSelectedColor = pickedColor;
+    const pickingValid = Boolean(
+      layer.props.autoHighlight &&
+      pickedLayer === layer &&
+      pickingSelectedColor !== EMPTY_PIXEL
+    );
+    layer.state.model.updateModuleSettings({
+      pickingValid,
+      pickingSelectedColor
+    });
   });
 
   infos.forEach(info => {
@@ -333,8 +358,8 @@ function getPickedColors(gl, {
     scissor: [x, y, width, height],
     blend: true,
     blendFunc: [gl.ONE, gl.ZERO, gl.CONSTANT_ALPHA, gl.ZERO],
-    blendEquation: gl.FUNC_ADD
-    // TODO - Set clear color
+    blendEquation: gl.FUNC_ADD,
+    clearColor: [0, 0, 0, 0]
   }, () => {
 
     // Clear the frame buffer
@@ -351,7 +376,13 @@ function getPickedColors(gl, {
             viewport: layer.context.viewport
           }),
           uniforms: Object.assign(
-            {renderPickingBuffer: 1, pickingEnabled: 1},
+            // TODO: Update all layers to use 'picking_uActive' (picking shader module)
+            // and then remove 'renderPickingBuffer' and 'pickingEnabled'.
+            {
+              renderPickingBuffer: 1,
+              pickingEnabled: 1,
+              picking_uActive: 1
+            },
             layer.context.uniforms,
             {layerIndex}
           ),

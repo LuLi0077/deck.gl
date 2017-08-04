@@ -1,17 +1,15 @@
-const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 64, 128, 64]);
-
 const DEFAULT_MODULE_OPTIONS = {
   pickingSelectedColor: null, //  Set to a picking color to visually highlight that item
-  pickingHighlightColor: DEFAULT_HIGHLIGHT_COLOR, // Color of visual highlight of "selected" item
   pickingThreshold: 1.0,
-  pickingActive: false, // Set to true when rendering to off-screen "picking" buffer
-  pickingValid: false
+  pickingActive: false // Set to true when rendering to off-screen "picking" buffer
 };
 
 /* eslint-disable camelcase */
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};
-  uniforms.picking_uValid = opts.pickingValid ? 1 : 0;
+  if (opts.pickingValid !== undefined) {
+    uniforms.picking_uValid = opts.pickingValid ? 1 : 0;
+  }
   if (opts.pickingSelectedColor !== undefined) {
     if (opts.pickingSelectedColor) {
       const selectedColor = [
@@ -43,7 +41,7 @@ uniform bool picking_uValid;
 
 varying vec4 picking_vRGBcolor_Aselected;
 
-const float COLOR_SCALE = 1. / 256.;
+const float COLOR_SCALE = 1. / 255.;
 
 bool isVertexPicked(vec3 vertexColor, vec3 pickedColor, bool pickingValid) {
   return
@@ -70,14 +68,14 @@ uniform vec4 picking_uHighlightColor;
 
 varying vec4 picking_vRGBcolor_Aselected;
 
-const float COLOR_SCALE = 1. / 256.;
+const float COLOR_SCALE = 1. / 255.;
 
 /*
  * Returns highlight color if this item is selected.
  */
 vec4 picking_filterHighlightColor(vec4 color) {
   bool selected = bool(picking_vRGBcolor_Aselected.a);
-  return selected ? picking_uHighlightColor : color;
+  return selected ? (picking_uHighlightColor * COLOR_SCALE) : color;
 }
 
 /*

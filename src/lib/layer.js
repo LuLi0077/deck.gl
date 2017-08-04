@@ -62,7 +62,12 @@ const defaultProps = {
   // Offset depth based on layer index to avoid z-fighting.
   // Negative values pull layer towards the camera
   // https://www.opengl.org/archives/resources/faq/technical/polygonoffset.htm
-  getPolygonOffset: ({layerIndex}) => [0, -layerIndex * 100]
+  getPolygonOffset: ({layerIndex}) => [0, -layerIndex * 100],
+
+  // Selection/Highlighting
+  selectedObjectIndex: -1,
+  autoHighlight: false,
+  highlightColor: [0, 0, 128, 128]
 };
 
 let counter = 0;
@@ -276,6 +281,7 @@ export default class Layer {
    * @return {Array} - the decoded color
    */
   encodePickingColor(i) {
+    assert(((((i + 1) >> 24) & 255) === 0), `index: ${i} out of coding range`);
     return [
       (i + 1) & 255,
       ((i + 1) >> 8) & 255,
@@ -283,6 +289,16 @@ export default class Layer {
     ];
   }
 
+  /**
+   * Returns the picking color of the object at 'selectedObjectIndex' prop.
+   * @return {Array} - the picking color or null if 'selectedObjectIndex is invalid.
+   */
+  selectedObjectPickingColor() {
+    if (this.props.selectedObjectIndex < 0) {
+      return null;
+    }
+    return this.encodePickingColor(this.props.selectedObjectIndex);
+  }
   /**
    * Returns the picking color that doesn't match any subfeature
    * Use if some graphics do not belong to any pickable subfeature
@@ -385,6 +401,7 @@ export default class Layer {
     // Add any subclass attributes
     this.updateAttributes(this.props);
     this._updateBaseUniforms();
+    this._updateModuleSettings();
 
     const {model} = this.state;
     if (model) {
@@ -415,6 +432,7 @@ export default class Layer {
       // Run the attribute updaters
       this.updateAttributes(updateParams.props);
       this._updateBaseUniforms();
+      this._updateModuleSettings();
 
       if (this.state.model) {
         this.state.model.setInstanceCount(this.getNumInstances());
@@ -610,6 +628,14 @@ export default class Layer {
       opacity: Math.pow(this.props.opacity, 1 / 2.2),
       ONE: 1.0
     });
+  }
+
+  _updateModuleSettings() {
+    if (this.state.model) {
+      this.state.model.updateModuleSettings({
+        pickingHighlightColor: this.props.highlightColor
+      });
+    }
   }
 
   // DEPRECATED METHODS
